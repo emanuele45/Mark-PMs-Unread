@@ -1,0 +1,119 @@
+<?xml version="1.0"?>
+<!DOCTYPE modification SYSTEM "http://www.simplemachines.org/xml/modification">
+<modification xmlns="http://www.simplemachines.org/xml/modification" xmlns:smf="http://www.simplemachines.org/">
+	<license>
+<!--
+/**
+ * Mark PM Unread (MPMU)
+ *
+ * @package MPMU
+ * @author emanuele
+ * @copyright 2011 emanuele, Simple Machines
+ * @license http://www.simplemachines.org/about/smf/license.php BSD
+ *
+ * @version 0.1.0
+ */
+-->
+	</license>
+	<id>emanuele:mark_pm_unread</id>
+
+	<file name="$sourcedir/PersonalMessage.php">
+		<operation><!-- 1 -->
+			<search position="before"><![CDATA[
+	$to_label = array();]]></search>
+			<add><![CDATA[
+	$to_markunread = array();]]></add>
+		</operation>
+		<operation><!-- 2 -->
+			<search position="before"><![CDATA[
+			$to_delete[] = (int) $pm;]]></search>
+			<add><![CDATA[
+		elseif ($action === 'markunread')
+			$to_markunread[] = (int) $pm;]]></add>
+		</operation>
+		<operation><!-- 3 -->
+			<search position="before"><![CDATA[
+		deleteMessages($to_delete, $context['display_mode'] == 2 ? null : $context['folder']);]]></search>
+			<add><![CDATA[
+
+	// Are we marking unread anything?
+	if (!empty($to_markunread))
+	{
+		markMessages($to_markunread, null, null, false);
+
+		$request = $smcFunc['db_query']('', '
+			SELECT id_pm
+			FROM {db_prefix}pm_recipients
+			WHERE id_member = {int:id_member}
+				AND FIND_IN_SET({string:label}, labels) != 0
+			ORDER BY id_pm DESC
+			LIMIT 1',
+			array(
+				'id_member' => $user_info['id'],
+				'label' => $context['current_label_id'],
+		));
+		list($lastPM) = $smcFunc['db_fetch_row']($request);
+		$smcFunc['db_free_result']($request);
+		if (in_array($lastPM, $to_markunread))
+		{
+			if ($context['current_label_id'] == -1)
+				redirectexit();
+			else
+				redirectexit('action=pm');
+		}
+	}]]></add>
+		</operation>
+		<operation><!-- 4 -->
+			<search position="replace"><![CDATA[function markMessages($personal_messages = null, $label = null, $owner = null)]]></search>
+			<add><![CDATA[function markMessages($personal_messages = null, $label = null, $owner = null, $markread = true)]]></add>
+		</operation>
+		<operation><!-- 5 -->
+			<search position="replace"><![CDATA[
+	$smcFunc['db_query']('', '
+		UPDATE {db_prefix}pm_recipients
+		SET is_read = is_read | 1
+		WHERE id_member = {int:id_member}
+			AND NOT (is_read & 1 >= 1)' . ($label === null ? '' : '
+			AND FIND_IN_SET({string:label}, labels) != 0') . ($personal_messages !== null ? '
+			AND id_pm IN ({array_int:personal_messages})' : ''),
+		array(
+			'personal_messages' => $personal_messages,
+			'id_member' => $owner,
+			'label' => $label,
+		)
+	);]]></search>
+			<add><![CDATA[
+ 	$smcFunc['db_query']('', '
+ 		UPDATE {db_prefix}pm_recipients
+		SET is_read = {raw:markread}
+		WHERE id_member = {int:id_member}' .
+			($markread ? ' AND NOT (is_read & 1 >= 1)' : '') . ($label === null ? '' : '
+ 			AND FIND_IN_SET({string:label}, labels) != 0') . ($personal_messages !== null ? '
+ 			AND id_pm IN ({array_int:personal_messages})' : ''),
+ 		array(
+ 			'personal_messages' => $personal_messages,
+ 			'id_member' => $owner,
+ 			'label' => $label,
+			'markread' => ($markread ? 'is_read | 1' : '0'),
+ 		)
+ 	);]]></add>
+		</operation>
+	</file>
+	<file name="$themedir/PersonalMessage.template.php">
+		<operation><!-- 1 -->
+			<search position="before"><![CDATA[
+				'reply' => array('text' => 'reply_to_all', 'image' => 'reply.gif', 'lang' => true, 'url' => $scripturl . '?action=pm;sa=send;f=' . $context['folder'] . ($context['current_label_id'] != -1 ? ';l=' . $context['current_label_id'] : '') . ';pmsg=' . $context['current_pm'] . ';u=all', 'active' => true),]]></search>
+			<add><![CDATA[
+				'mark_unread' => array('text' => 'mark_unread_all', 'image' => 'mark_unread.gif', 'lang' => true, 'url' => $scripturl . '?action=pm;sa=pmactions;pm_actions[' . $context['current_pm'] . ']=markunread;conversation;f=' . $context['folder'] . ';start=' . $context['start'] . ($context['current_label_id'] != -1 ? ';l=' . $context['current_lable_id'] : '') . ';' . $context['session_var'] . '=' . $context['session_id']),]]></add>
+		</operation>
+		<operation><!-- 2 -->
+			<search position="after"><![CDATA[
+			echo '
+					<li class="remove_button"><a href="', $scripturl, '?action=pm;sa=pmactions;pm_actions[', $message['id'], ']=delete;f=', $context['folder'], ';start=', $context['start'], $context['current_label_id'] != -1 ? ';l=' . $context['current_label_id'] : '', ';', $context['session_var'], '=', $context['session_id'], '" onclick="return confirm(\'', addslashes($txt['remove_message']), '?\');">', $txt['delete'], '</a></li>';]]></search>
+			<add><![CDATA[
+			if ($message['member']['name'] != $context['user']['name'])
+				echo '
+					<li class="notify_button"><a href="', $scripturl, '?action=pm;sa=pmactions;pm_actions[', $message['id'], ']=markunread;f=', $context['folder'], ';start=', $context['start'], $context['current_label_id'] != -1 ? ';l=' . $context['current_label_id'] : '', ';', $context['session_var'], '=', $context['session_id'], '">', $txt['mark_unread'], '</a></li>';]]></add>
+		</operation>
+	</file>
+</modification>

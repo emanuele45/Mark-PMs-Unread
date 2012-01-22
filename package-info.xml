@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!DOCTYPE package-info SYSTEM "http://www.simplemachines.org/xml/package-info">
+<package-info xmlns="http://www.simplemachines.org/xml/package-info" xmlns:smf="http://www.simplemachines.org/">
+	<license>
+<!--
+/**
+ * Mark PM Unread (MPMU)
+ *
+ * @package MPMU
+ * @author emanuele
+ * @copyright 2011 emanuele, Simple Machines
+ * @license http://www.simplemachines.org/about/smf/license.php BSD
+ *
+ * @version 0.1.0
+ */
+-->
+	</license>
+	<id>emanuele:mark_pm_unread</id>
+	<name>Mark PM Unread</name>
+	<version>0.1.0</version>
+	<type>modification</type>
+	<install for="2.0 - 2.0.99">
+		<modification>modification.xml</modification>
+		<modification>lang.xml</modification>
+		<redirect url="?action=admin;area=packages" />
+	</install>
+	<uninstall for="2.0 - 2.0.99">
+		<modification reverse="true">modification.xml</modification>
+		<modification reverse="true">lang.xml</modification>
+		<redirect url="?action=admin;area=packages" />
+	</uninstall>
+</package-info>
